@@ -6,9 +6,6 @@ on:
 jobs:
     Build_Job:
         runs-on: ubuntu-latest
-        strategy:
-          matrix:
-            node-version: ['18.x', '20.x']
         steps:
         - uses: actions/checkout@v5
           name: Checkout GitHUb Repository
@@ -16,4 +13,4 @@ jobs:
         - name: Set up nodeJS
           uses: actions/setup-node@v4
           with:
-            node-version: ${{ matrix.node-version }}
+            node-version: '20'
