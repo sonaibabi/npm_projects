@@ -4,24 +4,31 @@ on:
   pull_request:
     types: [ opened ]
 jobs:
-    Build_Job:
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout@v5
-          name: Checkout GitHUb Repository
+  Build_Job:
+    runs-on: ubuntu-latest
 
-        - name: Set up nodeJS
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20'
+    defaults:
+      run:
+        working-directory: services/app-service
 
-        - name: Install Dependencies
-          run: npm ci
-        
-        - name: Run Tests
-          run: npm test
+    steps:
+      - name: Checkout GitHub Repository
+        uses: actions/checkout@v4
 
-        - name: SonarQube Scan
-          uses: SonarSource/sonarcloud-github-action@master
-          env:
-            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: services/app-service
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
