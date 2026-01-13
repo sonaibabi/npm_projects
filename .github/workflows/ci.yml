@@ -21,8 +21,14 @@ jobs:
 
       - id: set-matrix
         run: |
-          echo "matrix=$(jq -nc --argjson files '${{ steps.changed.outputs.all_changed_files }}' \
-          '{service: $files}')" >> $GITHUB_OUTPUTS
+         if [ -z "${{ steps.changed.outputs.all_changed_files }}" ]; then
+         echo 'services=[]' >> $GITHUB_OUTPUT
+         else
+         SERVICES=$(echo "${{ steps.changed.outputs.all_changed_files }}" \
+         | jq -R -s -c 'split("\n") | map(select(length>0) | sub("^services/"; ""))')
+         echo "services=$SERVICES" >> $GITHUB_OUTPUT
+         fi
+
   build-and-scan:
     needs: detect-changes
     if: needs.detect-changes.outputs.matrix != ''
