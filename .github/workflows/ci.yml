@@ -7,7 +7,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      services: ${{ steps.set-matrix.outputs.services }}
 
     steps:
       - uses: actions/checkout@v4
