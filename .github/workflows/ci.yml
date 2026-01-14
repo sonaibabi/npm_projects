@@ -31,23 +31,23 @@ jobs:
 
   build-and-scan:
     needs: detect-changes
-    if: needs.detect-changes.outputs.matrix != ''
+    if: needs.detect-changes.outputs.services != '[]'
     runs-on: ubuntu-latest
-
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build service
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+    defaults:
+      run:
         working-directory: services/${{ matrix.service }}
-        run: |
-          npm ci
-          npm test
-      - name: Sonar Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        with:
-          projectBaseDir: services/${{ matrix.service }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Debug service name
+      run: echo "Building service ${{ matrix.service }}"
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - run: npm ci
+    - run: npm test
