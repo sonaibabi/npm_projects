@@ -57,5 +57,7 @@ jobs:
     
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
+      with:
+        projectBaseDir: services/${{ matrix.service }}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
