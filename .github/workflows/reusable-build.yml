@@ -1,0 +1,59 @@
+name: Reusable Docker Build & Push
+
+on:
+  workflow_call:
+    inputs:
+      services:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(inputs.services) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Determine next image version
+        id: version
+        run: |
+          REPO="${{ matrix.service }}"
+          LATEST=$(aws ecr describe-images \
+            --repository-name $REPO \
+            --query 'imageDetails[].imageTags[]' \
+            --output text 2>/dev/null | tr '\t' '\n' | grep '^v' | sed 's/v//' | sort -n | tail -1)
+
+          if [ -z "$LATEST" ]; then
+            NEXT="v1"
+          else
+            NEXT="v$((LATEST + 1))"
+          fi
+
+          echo "version=$NEXT" >> $GITHUB_OUTPUT
+
+      - name: Build & Push Image
+        run: |
+          IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ matrix.service }}:${{ steps.version.outputs.version }}"
+          docker build -t $IMAGE services/${{ matrix.service }}
+          docker push $IMAGE
