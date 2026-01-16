@@ -1,20 +1,25 @@
 name: Build Docker Images
+
 on:
   workflow_run:
     workflows: ["CI Pipeline"]
-    types: [ completed ]
+    types: [completed]
+
 jobs:
-  trigger-build:
+  detect-changes:
     if: |
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
+
+    outputs:
+      services: ${{ steps.set-matrix.outputs.services }}
+
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-    
+
       - id: changed
         uses: tj-actions/changed-files@v45
         with:
@@ -24,22 +29,23 @@ jobs:
 
       - id: set-matrix
         run: |
-         if [ -z "${{ steps.changed.outputs.all_changed_files }}" ]; then
-         echo 'services=[]' >> $GITHUB_OUTPUT
-         else
-         SERVICES=$(echo "${{ steps.changed.outputs.all_changed_files }}" \
-         | jq -R -s -c 'split("\n") | map(select(length>0) | sub("^services/"; ""))')
-         echo "services=$SERVICES" >> $GITHUB_OUTPUT
-         fi
-      
-      - name: Build images
-        if: steps.set-matrix.outputs.services != '[]'
-        uses: ./.github/workflows/reusable-build.yml
-        with:
-          services: ${{ steps.set-matrix.outputs.services }}
-          secrets:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          projectBaseDir: services/${{ matrix.service }}
+          if [ -z "${{ steps.changed.outputs.all_changed_files }}" ]; then
+            echo 'services=[]' >> $GITHUB_OUTPUT
+          else
+            SERVICES=$(echo "${{ steps.changed.outputs.all_changed_files }}" \
+              | jq -R -s -c 'split("\n") | map(select(length>0) | sub("^services/"; ""))')
+            echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-push:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != '[]'
+
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      services: ${{ needs.detect-changes.outputs.services }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
