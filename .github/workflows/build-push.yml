@@ -7,35 +7,7 @@ on:
 
 jobs:
   detect-changes:
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
-    runs-on: ubuntu-latest
-
-    outputs:
-      services: ${{ steps.set-matrix.outputs.services }}
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - id: changed
-        uses: tj-actions/changed-files@v45
-        with:
-          dir_names: true
-          files: |
-            services/**
-
-      - id: set-matrix
-        run: |
-          if [ -z "${{ steps.changed.outputs.all_changed_files }}" ]; then
-            echo 'services=[]' >> $GITHUB_OUTPUT
-          else
-            SERVICES=$(echo "${{ steps.changed.outputs.all_changed_files }}" \
-              | jq -R -s -c 'split("\n") | map(select(length>0) | sub("^services/"; ""))')
-            echo "services=$SERVICES" >> $GITHUB_OUTPUT
-          fi
+    uses: ./.github/workflows/reusable-detect-changes.yml
 
   build-and-push:
     needs: detect-changes
