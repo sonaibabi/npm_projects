@@ -1,0 +1,6 @@
+resources:
+  - ../../base
+
+images:
+  - name: 092797494821.dkr.ecr.ap-south-1.amazonaws.com/app-service
+    newTag: v1
